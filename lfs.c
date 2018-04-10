@@ -1262,6 +1262,7 @@ int lfs_mkdir(lfs_t *lfs, const char *path) {
 
     cwd.d.tail[0] = dir.pair[0];
     cwd.d.tail[1] = dir.pair[1];
+    lfs_entry_tole32(&entry.d);
     err = lfs_dir_set(lfs, &cwd, &entry, (struct lfs_region[]){
             {LFS_FROM_MEM, 0, 0, &entry.d, sizeof(entry.d)},
             {LFS_FROM_MEM, 0, 0, path, nlen}}, 2);
@@ -1883,8 +1884,7 @@ int lfs_file_sync(lfs_t *lfs, lfs_file_t *file) {
         }
 
         lfs_entry_t entry = {.off = file->pairoff};
-        err = lfs_dir_get(lfs, &cwd, entry.off, &entry.d, sizeof(entry.d));
-        lfs_entry_fromle32(&entry.d);
+        err = lfs_dir_get(lfs, &cwd, entry.off, &entry.d, 4);
         if (err) {
             return err;
         }
@@ -1902,6 +1902,7 @@ int lfs_file_sync(lfs_t *lfs, lfs_file_t *file) {
             entry.d.u.file.head = file->head;
             entry.d.u.file.size = file->size;
 
+            lfs_entry_tole32(&entry.d);
             buffer = (const uint8_t *)&entry.d + 4;
             size = sizeof(entry.d) - 4;
         } else {
@@ -2239,7 +2240,7 @@ int lfs_file_getattrs(lfs_t *lfs, lfs_file_t *file,
         }
 
         lfs_entry_t entry = {.off = file->pairoff};
-        err = lfs_dir_get(lfs, &cwd, entry.off, &entry.d, sizeof(entry.d));
+        err = lfs_dir_get(lfs, &cwd, entry.off, &entry.d, 4);
         if (err) {
             return err;
         }
@@ -2283,7 +2284,7 @@ int lfs_file_setattrs(lfs_t *lfs, lfs_file_t *file,
         }
 
         lfs_entry_t entry = {.off = file->pairoff};
-        err = lfs_dir_get(lfs, &cwd, entry.off, &entry.d, sizeof(entry.d));
+        err = lfs_dir_get(lfs, &cwd, entry.off, &entry.d, 4);
         if (err) {
             return err;
         }
@@ -2730,7 +2731,7 @@ int lfs_mount(lfs_t *lfs, const struct lfs_config *cfg) {
     }
 
     lfs_entry_t entry = {.off = sizeof(dir.d)};
-    err = lfs_dir_get(lfs, &dir, entry.off, &entry.d, sizeof(entry.d));
+    err = lfs_dir_get(lfs, &dir, entry.off, &entry.d, 4);
     if (err) {
         return err;
     }
@@ -2995,6 +2996,7 @@ static int lfs_relocate(lfs_t *lfs,
         // update disk, this creates a desync
         entry.d.u.dir[0] = newpair[0];
         entry.d.u.dir[1] = newpair[1];
+        lfs_entry_tole32(&entry.d);
         int err = lfs_dir_set(lfs, &parent, &entry, (struct lfs_region[]){
                 {LFS_FROM_MEM, 0, sizeof(entry.d),
                     &entry.d, sizeof(entry.d)}}, 1);
@@ -3123,8 +3125,7 @@ int lfs_deorphan(lfs_t *lfs) {
                             entry.d.u.dir[0], entry.d.u.dir[1]);
                     entry.d.type &= ~LFS_STRUCT_MOVED;
                     err = lfs_dir_set(lfs, &cwd, &entry, (struct lfs_region[]){
-                            {LFS_FROM_MEM, 0, sizeof(entry.d),
-                                &entry.d, sizeof(entry.d)}}, 1);
+                            {LFS_FROM_MEM, 0, 1, &entry.d, 1}}, 1);
                     if (err) {
                         return err;
                     }
@@ -3148,7 +3149,7 @@ int lfs_fs_getattrs(lfs_t *lfs, const struct lfs_attr *attrs, int count) {
     }
 
     lfs_entry_t entry = {.off = sizeof(dir.d)};
-    err = lfs_dir_get(lfs, &dir, entry.off, &entry.d, sizeof(entry.d));
+    err = lfs_dir_get(lfs, &dir, entry.off, &entry.d, 4);
     if (err) {
         return err;
     }
@@ -3165,7 +3166,7 @@ int lfs_fs_setattrs(lfs_t *lfs, const struct lfs_attr *attrs, int count) {
     }
 
     lfs_entry_t entry = {.off = sizeof(dir.d)};
-    err = lfs_dir_get(lfs, &dir, entry.off, &entry.d, sizeof(entry.d));
+    err = lfs_dir_get(lfs, &dir, entry.off, &entry.d, 4);
     if (err) {
         return err;
     }
