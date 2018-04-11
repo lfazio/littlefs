@@ -2260,6 +2260,7 @@ int lfs_file_getattrs(lfs_t *lfs, lfs_file_t *file,
                     return LFS_ERR_RANGE;
                 }
 
+                memset(attrs[j].buffer, 0, attrs[j].size);
                 memcpy(attrs[j].buffer,
                         file->attrs[i].buffer, file->attrs[i].size);
             }
@@ -2271,9 +2272,9 @@ int lfs_file_getattrs(lfs_t *lfs, lfs_file_t *file,
 
 int lfs_file_setattrs(lfs_t *lfs, lfs_file_t *file,
         const struct lfs_attr *attrs, int count) {
-    // just tack to the file, will be written at sync time
-    file->attrs = attrs;
-    file->attrcount = count;
+    if ((file->flags & 3) == LFS_O_RDONLY) {
+        return LFS_ERR_BADF;
+    }
 
     // at least make sure attributes fit
     if (!lfs_pairisnull(file->pair)) {
@@ -2295,6 +2296,11 @@ int lfs_file_setattrs(lfs_t *lfs, lfs_file_t *file,
             return res;
         }
     }
+
+    // just tack to the file, will be written at sync time
+    file->attrs = attrs;
+    file->attrcount = count;
+    file->flags |= LFS_F_DIRTY;
 
     return 0;
 }
